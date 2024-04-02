@@ -1,6 +1,9 @@
 # global dictionaries to keep track of imported data
 
-baselightData = {}
+baselightData = {
+    "files": [],
+    "shots" :[]
+}
 
 XytechData = {}
 
@@ -19,15 +22,13 @@ def processBL():
             bl = baselight.rstrip("\n").split("Dune2")
             bl = remove_filePath(bl)
             key, shots = parseShots(bl)
-            if check_baseLight(bl) == True:
-                append_shotList(key, shots)
-            else:
-                baselightData[key] = shots
+            baselightData["files"].append(key)
+            baselightData["shots"].append(shots)
             baselight = bl_file.readline()
             # loop to read data until eof
     #close file connection
     bl_file.close()
-                
+               
 #method that processes xytech text file
 def process_Xytech():
     #open file for reading
@@ -50,7 +51,7 @@ def process_Xytech():
                 xy = xy.rstrip("\n").split(":")
                 XytechData["Job"] = xy[1].rstrip("\n").strip()
 
-            # create 
+            # create
             if "Dune2" in xy:
                 xy = xy.rstrip("\n").split("Dune2")
                 # check if xytech file locations exist
@@ -83,22 +84,11 @@ def parseShots(line):
             shots.append(line[i])
     return key, shots
 
-#checks if the file location already exists in baselight data
-def check_baseLight(data):
-    if data[0] in baselightData.keys():
-        return True
-    return False
-
 #check if file location exists in Xytech data
 def check_Xytech(line):
     if line in XytechData.keys():
         return True
     return False
-
-# method that appends current shot list if the file location already exists 
-def append_shotList(key, data):
-    for i in range(0, len(data)):
-        baselightData[key].append(data[i])
 
 # method that exports all data
 def export():
@@ -108,24 +98,27 @@ def export():
         export.write("Proucer,Operator,Job,Notes\n")
         export.write(XytechData["Producer"] + "," + XytechData["Operator"] + "," + XytechData["Job"] +"," + XytechData["Notes"] + "\n\n")
         export.write("Show Location,Frames to Fix\n")
+        shotListIndex = 0
         #loop through all file locations in baselight and grab new file location from Xytech
-        for key in baselightData.keys():
+        for key in baselightData["files"]:
+            shotList = baselightData["shots"][shotListIndex]
             newFile = str(get_fileLocation(key))
-            export.write(newFile + key +", " + baselightData[key][0])
-            #loop through the shotlists for each file location
+            export.write(newFile + key +", " + shotList[0])
+            #loop through the shotlists for each files location
             counter = 1
-            for i in range(1, len(baselightData[key])):
-                if int(baselightData[key][i]) > int(baselightData[key][i-1]) + 1:
+            for i in range(1, len(shotList)):
+                if int(shotList[i]) > int(shotList[i-1]) + 1:
                     if counter == 1:
-                        export.write("\n" + newFile+ key +", " + baselightData[key][i]) 
+                        export.write("\n" + newFile+ key +", " + shotList[i])
                     else:
-                        export.write("-" + baselightData[key][i-1] + "\n" + newFile+ key +", " + baselightData[key][i]) 
+                        export.write("-" + shotList[i-1] + "\n" + newFile+ key +", " + shotList[i])
                         counter = 1
                 else:
                     counter += 1
             if counter > 1:
-                export.write("-" + baselightData[key][i]) 
+                export.write("-" + shotList[i])
             export.write("\n")
+            shotListIndex+=1
     export.close()
 
 def get_fileLocation(key):
@@ -133,7 +126,7 @@ def get_fileLocation(key):
         for file in XytechData[newLocation]:
             if key == file:
                 return newLocation + "Dune2"
-            
+           
 # main method calling subsequent methods
 def main():
     processBL()
